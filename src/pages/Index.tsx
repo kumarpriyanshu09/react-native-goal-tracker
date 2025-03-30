@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from '@/components/Header';
-import { TabNavigation } from '@/components/TabNavigation';
+import { TabNavigation, TabType } from '@/components/TabNavigation';
 import { TodoItem } from '@/components/TodoItem';
 import { GoalItem } from '@/components/GoalItem';
 import { AddItemButton } from '@/components/AddItemButton';
@@ -29,7 +29,7 @@ const Index = () => {
     today.setHours(0, 0, 0, 0);
     return today;
   });
-  const [activeTab, setActiveTab] = useState<'Tasks' | 'Goals'>('Tasks');
+  const [activeTab, setActiveTab] = useState<TabType>('Tasks');
   
   // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -252,6 +252,11 @@ const Index = () => {
     count: (activeTab === 'Tasks' ? todoItems : goalItems).filter(item => !item.isCompleted).length,
   }), [activeTab, todoItems, goalItems]);
 
+  // Handle tab change
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header 
@@ -264,7 +269,7 @@ const Index = () => {
       
       <TabNavigation 
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
       
       <div className="container px-4 py-2 pb-32">
