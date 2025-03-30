@@ -21,6 +21,7 @@ interface AddTodoModalProps {
 export function AddTodoModal({ isOpen, onClose, onAdd }: AddTodoModalProps) {
   const [text, setText] = useState('');
   const [time, setTime] = useState('');
+  const [category, setCategory] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,10 +30,11 @@ export function AddTodoModal({ isOpen, onClose, onAdd }: AddTodoModalProps) {
         text: text.trim(),
         isCompleted: false,
         time: time.trim() || null,
-        category: ''
+        category: category.trim() || ''
       });
       setText('');
       setTime('');
+      setCategory('');
       onClose();
     }
   };
@@ -62,6 +64,15 @@ export function AddTodoModal({ isOpen, onClose, onAdd }: AddTodoModalProps) {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 placeholder="e.g. 9:00 AM"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category (optional)</Label>
+              <Input
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="e.g. Work, Personal, Health"
               />
             </div>
           </div>

@@ -1,18 +1,18 @@
 
 import React, { useState } from 'react';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle
+} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JournalEntry } from '@/types';
+import { format } from 'date-fns';
+import { Bookmark, MoreHorizontal } from 'lucide-react';
 
 interface AddJournalEntryModalProps {
   isOpen: boolean;
@@ -25,8 +25,7 @@ export function AddJournalEntryModal({ isOpen, onClose, onAdd }: AddJournalEntry
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<JournalEntry['mood']>('neutral');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (title.trim() && content.trim()) {
       onAdd({
         title: title.trim(),
@@ -42,59 +41,75 @@ export function AddJournalEntryModal({ isOpen, onClose, onAdd }: AddJournalEntry
     }
   };
 
+  const today = new Date();
+  const formattedDate = format(today, 'EEEE, MMM d');
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[525px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Journal Entry</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter entry title"
-                autoFocus
-              />
-            </div>
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="bottom" className="h-[100dvh] p-0 border-0 rounded-t-[20px] bg-background overflow-hidden">
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between border-b">
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <Bookmark className="h-6 w-6 text-primary" />
+            </Button>
             
-            <div className="grid gap-2">
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your thoughts..."
-                rows={5}
-              />
-            </div>
+            <SheetTitle className="text-center text-lg font-medium">
+              {formattedDate}
+            </SheetTitle>
             
-            <div className="grid gap-2">
-              <Label>Mood</Label>
+            <div className="flex space-x-2">
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-6 w-6" />
+              </Button>
+              <Button variant="ghost" className="text-primary font-medium" onClick={handleSubmit}>
+                Done
+              </Button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-4">
+            <Input
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-xl border-none px-0 mb-2 focus-visible:ring-0 placeholder:text-muted-foreground/50"
+            />
+            <Textarea
+              placeholder="Start writing..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="flex-1 resize-none border-none px-0 min-h-[200px] focus-visible:ring-0 placeholder:text-muted-foreground/50"
+            />
+          </div>
+          
+          {/* Footer with mood selector */}
+          <div className="border-t p-2 bg-muted/10">
+            <div className="flex justify-center items-center">
               <Tabs value={mood} onValueChange={(value) => setMood(value as JournalEntry['mood'])}>
-                <TabsList className="grid grid-cols-5 w-full">
-                  <TabsTrigger value="happy">😊 Happy</TabsTrigger>
-                  <TabsTrigger value="productive">💪 Productive</TabsTrigger>
-                  <TabsTrigger value="neutral">😐 Neutral</TabsTrigger>
-                  <TabsTrigger value="tired">😴 Tired</TabsTrigger>
-                  <TabsTrigger value="sad">😔 Sad</TabsTrigger>
+                <TabsList className="grid grid-cols-5 w-full max-w-md">
+                  <TabsTrigger value="happy" className="data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                    😊
+                  </TabsTrigger>
+                  <TabsTrigger value="productive" className="data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                    💪
+                  </TabsTrigger>
+                  <TabsTrigger value="neutral" className="data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                    😐
+                  </TabsTrigger>
+                  <TabsTrigger value="tired" className="data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                    😴
+                  </TabsTrigger>
+                  <TabsTrigger value="sad" className="data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                    😔
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!title.trim() || !content.trim()}>
-              Add Entry
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

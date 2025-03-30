@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from 'react-router-dom';
 
-type TabType = 'Tasks' | 'Goals' | 'Journal';
+export type TabType = 'Tasks' | 'Goals' | 'Journal';
 
 interface TabNavigationProps {
   activeTab: TabType;
