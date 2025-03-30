@@ -2,25 +2,38 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+type TabType = 'Tasks' | 'Goals' | 'Journal';
 
 interface TabNavigationProps {
-  activeTab: 'Tasks' | 'Goals' | 'Journal';
-  onChange: (tab: 'Tasks' | 'Goals') => void;
+  activeTab: TabType;
+  onChange: (tab: TabType) => void;
 }
 
 export function TabNavigation({ activeTab, onChange }: TabNavigationProps) {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleJournalClick = () => {
-    navigate('/journal');
+  const handleTabChange = (tab: TabType) => {
+    if (tab === 'Journal') {
+      // Navigate to journal page
+      navigate('/journal');
+    } else if (location.pathname === '/journal') {
+      // Navigate back to home page from journal with the correct tab
+      navigate('/');
+      onChange(tab);
+    } else {
+      // Just change the tab
+      onChange(tab);
+    }
   };
 
   return (
     <div className="flex border-b border-border justify-center">
       <Button
         variant="ghost"
-        onClick={() => onChange('Tasks')}
+        onClick={() => handleTabChange('Tasks')}
         className={cn(
           "flex-1 rounded-none py-2.5 text-base font-medium relative",
           activeTab === 'Tasks' 
@@ -36,7 +49,7 @@ export function TabNavigation({ activeTab, onChange }: TabNavigationProps) {
       
       <Button
         variant="ghost"
-        onClick={() => onChange('Goals')}
+        onClick={() => handleTabChange('Goals')}
         className={cn(
           "flex-1 rounded-none py-2.5 text-base font-medium relative",
           activeTab === 'Goals' 
@@ -52,7 +65,7 @@ export function TabNavigation({ activeTab, onChange }: TabNavigationProps) {
 
       <Button
         variant="ghost"
-        onClick={handleJournalClick}
+        onClick={() => handleTabChange('Journal')}
         className={cn(
           "flex-1 rounded-none py-2.5 text-base font-medium relative",
           activeTab === 'Journal' 

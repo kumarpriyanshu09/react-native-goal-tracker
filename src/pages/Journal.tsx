@@ -1,283 +1,173 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Smile, Meh, Frown, Zap, Coffee, PenLine, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { JournalEntry } from "@/types";
+import { Header } from '@/components/Header';
+import { TabNavigation } from '@/components/TabNavigation';
+import { AddItemButton } from '@/components/AddItemButton';
+import { AddJournalEntryModal } from '@/components/AddJournalEntryModal';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { JournalEntry } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 const Journal = () => {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<JournalEntry[]>([
-    {
-      id: "entry-1",
-      date: new Date().toISOString(),
-      title: "First day of journaling",
-      content: "Today I started using a journal to keep track of my thoughts and experiences. I'm excited to see how this helps me reflect and grow.",
-      mood: "happy",
-    },
-  ]);
   
-  const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
-  const [newEntry, setNewEntry] = useState({
-    title: "",
-    content: "",
-    mood: "neutral" as JournalEntry["mood"],
-  });
-  
-  const [isCreating, setIsCreating] = useState(false);
-  
-  // Get the current date in a readable format
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-  
-  const handleCreateEntry = () => {
-    if (!newEntry.title.trim() || !newEntry.content.trim()) {
-      toast({
-        title: "Missing information",
-        description: "Please provide both a title and content for your journal entry.",
-        variant: "destructive",
-      });
-      return;
+  // Theme state
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return savedTheme ? savedTheme === 'dark' : prefersDark;
     }
-    
-    const entry: JournalEntry = {
-      id: `entry-${Date.now()}`,
+    return false;
+  });
+
+  // Date and modal state
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Journal entries
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([
+    {
+      id: 'journal-1',
       date: new Date().toISOString(),
-      title: newEntry.title,
-      content: newEntry.content,
-      mood: newEntry.mood,
+      title: 'First day of journaling',
+      content: 'Started using this new app to track my tasks, goals, and thoughts. So far it seems promising!',
+      mood: 'happy'
+    },
+    {
+      id: 'journal-2',
+      date: new Date(Date.now() - 86400000).toISOString(), // yesterday
+      title: 'Productivity challenges',
+      content: 'Struggled to focus today. Need to work on minimizing distractions and creating a better work environment.',
+      mood: 'tired'
+    }
+  ]);
+
+  // Theme toggling
+  const toggleTheme = useCallback(() => {
+    setIsDarkMode(prev => {
+      const newMode = !prev;
+      localStorage.setItem('theme', newMode ? 'dark' : 'light');
+      return newMode;
+    });
+  }, []);
+
+  // Update document theme when state changes
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  // Date selection
+  const handleDateSelect = useCallback((date: Date) => {
+    date.setHours(0, 0, 0, 0);
+    setSelectedDate(date);
+    // In a real app, we would fetch entries for the selected date here
+  }, []);
+
+  // Filter entries for the selected date
+  const filteredEntries = useMemo(() => {
+    const selectedDateStr = selectedDate.toDateString();
+    return journalEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate.toDateString() === selectedDateStr;
+    });
+  }, [journalEntries, selectedDate]);
+
+  // Add new journal entry
+  const handleAddEntry = useCallback((entry: Omit<JournalEntry, 'id'>) => {
+    const newEntry = {
+      ...entry,
+      id: uuidv4()
     };
     
-    setEntries([entry, ...entries]);
-    setNewEntry({
-      title: "",
-      content: "",
-      mood: "neutral",
-    });
-    setIsCreating(false);
+    setJournalEntries(prev => [newEntry, ...prev]);
     
     toast({
-      title: "Journal entry saved",
-      description: "Your thoughts have been recorded successfully.",
+      title: "Journal entry added",
+      description: entry.title,
+      duration: 2000,
     });
-  };
-  
-  const getMoodIcon = (mood?: JournalEntry["mood"]) => {
-    switch (mood) {
-      case "happy":
-        return <Smile className="text-green-500" />;
-      case "sad":
-        return <Frown className="text-red-500" />;
-      case "productive":
-        return <Zap className="text-yellow-500" />;
-      case "tired":
-        return <Coffee className="text-orange-500" />;
-      case "neutral":
-      default:
-        return <Meh className="text-gray-500" />;
+  }, [toast]);
+
+  // Get mood emoji
+  const getMoodEmoji = useCallback((mood?: JournalEntry['mood']) => {
+    switch(mood) {
+      case 'happy': return '😊';
+      case 'productive': return '💪';
+      case 'neutral': return '😐';
+      case 'tired': return '😴';
+      case 'sad': return '😔';
+      default: return '';
     }
-  };
-  
-  const renderEntryList = () => (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Journal</h1>
-        <Button onClick={() => setIsCreating(true)} className="flex items-center gap-2">
-          <Plus size={18} />
-          New Entry
-        </Button>
-      </div>
-      
-      {entries.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
-          <PenLine className="mx-auto mb-2 h-10 w-10 opacity-50" />
-          <p>No journal entries yet</p>
-          <Button 
-            onClick={() => setIsCreating(true)}
-            variant="outline" 
-            className="mt-4"
-          >
-            Write your first entry
-          </Button>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {entries.map((entry) => (
-            <Card 
-              key={entry.id} 
-              className="hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => setActiveEntry(entry)}
-            >
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-medium">{entry.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(entry.date)}
-                    </p>
-                  </div>
-                  {entry.mood && (
-                    <div className="p-1">
-                      {getMoodIcon(entry.mood)}
-                    </div>
-                  )}
-                </div>
-                <p className="mt-2 text-sm line-clamp-2">{entry.content}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-  
-  const renderEntryDetail = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setActiveEntry(null)}
-        >
-          <ChevronLeft size={18} />
-        </Button>
-        <h2 className="text-xl font-medium">Journal Entry</h2>
-      </div>
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-2xl font-bold">{activeEntry?.title}</h1>
-              <p className="text-sm text-muted-foreground">
-                {formatDate(activeEntry?.date || "")}
-              </p>
-            </div>
-            {activeEntry?.mood && (
-              <div className="p-2 bg-background rounded-full shadow-sm">
-                {getMoodIcon(activeEntry.mood)}
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-6 whitespace-pre-wrap">
-            {activeEntry?.content}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-  
-  const renderCreateForm = () => (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setIsCreating(false)}
-        >
-          <ChevronLeft size={18} />
-        </Button>
-        <h2 className="text-xl font-medium">New Journal Entry</h2>
-      </div>
-      
-      <Card>
-        <CardContent className="p-6 space-y-4">
-          <div>
-            <Input
-              placeholder="Entry title"
-              value={newEntry.title}
-              onChange={(e) => setNewEntry({...newEntry, title: e.target.value})}
-              className="text-lg font-medium"
-            />
-          </div>
-          
-          <div className="flex flex-wrap gap-2 py-2">
-            <span className="text-sm text-muted-foreground mr-2">How are you feeling?</span>
-            <Button
-              variant={newEntry.mood === "happy" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setNewEntry({...newEntry, mood: "happy"})}
-              className="flex items-center gap-1"
-            >
-              <Smile size={16} /> Happy
-            </Button>
-            <Button
-              variant={newEntry.mood === "neutral" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setNewEntry({...newEntry, mood: "neutral"})}
-              className="flex items-center gap-1"
-            >
-              <Meh size={16} /> Neutral
-            </Button>
-            <Button
-              variant={newEntry.mood === "sad" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setNewEntry({...newEntry, mood: "sad"})}
-              className="flex items-center gap-1"
-            >
-              <Frown size={16} /> Sad
-            </Button>
-            <Button
-              variant={newEntry.mood === "productive" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setNewEntry({...newEntry, mood: "productive"})}
-              className="flex items-center gap-1"
-            >
-              <Zap size={16} /> Productive
-            </Button>
-            <Button
-              variant={newEntry.mood === "tired" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setNewEntry({...newEntry, mood: "tired"})}
-              className="flex items-center gap-1"
-            >
-              <Coffee size={16} /> Tired
-            </Button>
-          </div>
-          
-          <div>
-            <Textarea
-              placeholder="Write your journal entry here..."
-              value={newEntry.content}
-              onChange={(e) => setNewEntry({...newEntry, content: e.target.value})}
-              className="min-h-[200px]"
-            />
-          </div>
-          
-          <div className="flex justify-end pt-2">
-            <Button onClick={handleCreateEntry}>Save Entry</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-  
-  // Determine which view to render
-  let content;
-  if (isCreating) {
-    content = renderCreateForm();
-  } else if (activeEntry) {
-    content = renderEntryDetail();
-  } else {
-    content = renderEntryList();
-  }
-  
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="container px-4 py-8 pb-32">
-        {content}
+      <Header 
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
+        activeViewData={{
+          type: 'Journal',
+          count: filteredEntries.length
+        }}
+        isDarkMode={isDarkMode}
+        toggleTheme={toggleTheme}
+      />
+      
+      <TabNavigation 
+        activeTab="Journal"
+        onChange={() => {}} // This is handled in the component now
+      />
+      
+      <div className="container px-4 py-4 pb-32">
+        {filteredEntries.length > 0 ? (
+          <div className="space-y-4 animate-fade-in">
+            {filteredEntries.map(entry => (
+              <Card key={entry.id} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl">{entry.title}</CardTitle>
+                    {entry.mood && (
+                      <span className="text-2xl" title={entry.mood}>
+                        {getMoodEmoji(entry.mood)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(entry.date), 'h:mm a')}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-line">{entry.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="py-10 text-center text-muted-foreground">
+            <p>No journal entries for this day</p>
+            <p className="mt-2">Click the + button to add one</p>
+          </div>
+        )}
       </div>
+
+      <AddItemButton onClick={() => setIsAddModalOpen(true)} />
+      
+      <AddJournalEntryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddEntry}
+      />
     </div>
   );
 };

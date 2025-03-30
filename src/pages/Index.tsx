@@ -1,11 +1,14 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { TodoItem } from '@/components/TodoItem';
 import { GoalItem } from '@/components/GoalItem';
+import { AddItemButton } from '@/components/AddItemButton';
+import { AddTodoModal } from '@/components/AddTodoModal';
+import { AddGoalModal } from '@/components/AddGoalModal';
 import { Todo, Goal } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 const Index = () => {
   const { toast } = useToast();
@@ -27,6 +30,9 @@ const Index = () => {
     return today;
   });
   const [activeTab, setActiveTab] = useState<'Tasks' | 'Goals'>('Tasks');
+  
+  // Modal state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Sample data
   const [todoItems, setTodoItems] = useState<Todo[]>([
@@ -192,6 +198,38 @@ const Index = () => {
     }
   }, [goalItems, toast]);
 
+  // Add new todo
+  const handleAddTodo = useCallback((todo: Omit<Todo, 'id'>) => {
+    const newTodo = {
+      ...todo,
+      id: uuidv4()
+    };
+    
+    setTodoItems(prev => [newTodo, ...prev]);
+    
+    toast({
+      title: "Task added",
+      description: todo.text,
+      duration: 2000,
+    });
+  }, [toast]);
+
+  // Add new goal
+  const handleAddGoal = useCallback((goal: Omit<Goal, 'id'>) => {
+    const newGoal = {
+      ...goal,
+      id: uuidv4()
+    };
+    
+    setGoalItems(prev => [newGoal, ...prev]);
+    
+    toast({
+      title: "Goal added",
+      description: goal.text,
+      duration: 2000,
+    });
+  }, [toast]);
+
   // Sort items: incomplete first, then by time or text
   const sortItems = useCallback(<T extends Todo | Goal>(items: T[]): T[] => {
     return [...items].sort((a, b) => {
@@ -243,6 +281,7 @@ const Index = () => {
             ) : (
               <div className="py-10 text-center text-muted-foreground">
                 <p>No tasks for today</p>
+                <p className="mt-2">Click the + button to add one</p>
               </div>
             )}
           </div>
@@ -261,11 +300,28 @@ const Index = () => {
             ) : (
               <div className="py-10 text-center text-muted-foreground">
                 <p>No goals for today</p>
+                <p className="mt-2">Click the + button to add one</p>
               </div>
             )}
           </div>
         )}
       </div>
+      
+      <AddItemButton onClick={() => setIsAddModalOpen(true)} />
+      
+      {activeTab === 'Tasks' ? (
+        <AddTodoModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={handleAddTodo}
+        />
+      ) : (
+        <AddGoalModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={handleAddGoal}
+        />
+      )}
     </div>
   );
 };
