@@ -2,13 +2,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
+import { useNavigate } from 'react-router-dom';
 
 interface TabNavigationProps {
-  activeTab: 'Tasks' | 'Goals';
+  activeTab: 'Tasks' | 'Goals' | 'Journal';
   onChange: (tab: 'Tasks' | 'Goals') => void;
 }
 
 export function TabNavigation({ activeTab, onChange }: TabNavigationProps) {
+  const navigate = useNavigate();
+
+  const handleJournalClick = () => {
+    navigate('/journal');
+  };
+
   return (
     <div className="flex border-b border-border justify-center">
       <Button
@@ -39,6 +46,22 @@ export function TabNavigation({ activeTab, onChange }: TabNavigationProps) {
       >
         Goals
         {activeTab === 'Goals' && (
+          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
+        )}
+      </Button>
+
+      <Button
+        variant="ghost"
+        onClick={handleJournalClick}
+        className={cn(
+          "flex-1 rounded-none py-2.5 text-base font-medium relative",
+          activeTab === 'Journal' 
+            ? "text-primary" 
+            : "text-muted-foreground"
+        )}
+      >
+        Journal
+        {activeTab === 'Journal' && (
           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></span>
         )}
       </Button>

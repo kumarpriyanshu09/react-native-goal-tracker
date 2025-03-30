@@ -19,6 +19,14 @@ export interface Goal {
   category?: string;
 }
 
+export interface JournalEntry {
+  id: string;
+  date: string; // ISO string
+  title: string;
+  content: string;
+  mood?: 'happy' | 'neutral' | 'sad' | 'productive' | 'tired';
+}
+
 export interface DailyData {
   date: string; // ISO string
   todos: Todo[];
