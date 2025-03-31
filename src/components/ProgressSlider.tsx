@@ -15,7 +15,7 @@ interface ProgressSliderProps {
 }
 
 // Draggable Progress Slider Component
-const ProgressSlider: React.FC<ProgressSliderProps> = ({
+export const ProgressSlider: React.FC<ProgressSliderProps> = ({
   activity,
   emoji,
   color,
@@ -201,4 +201,5 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
   );
 };
 
+// Add this line to maintain compatibility with both named and default imports
 export default ProgressSlider;
