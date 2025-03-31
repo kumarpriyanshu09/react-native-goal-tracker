@@ -11,7 +11,7 @@ interface ProgressSliderProps {
   text?: string;
 }
 
-// Simplified Progress Slider Component
+// Improved Progress Slider Component with better gesture handling
 export const ProgressSlider: React.FC<ProgressSliderProps> = ({
   current = 0,
   target = 100,
@@ -23,6 +23,14 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
   const [progress, setProgress] = useState(current);
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
+  
+  // Track gesture direction
+  const gestureRef = useRef({
+    startX: 0,
+    startY: 0,
+    isDirectionLocked: false,
+    isHorizontalDrag: false
+  });
 
   // Sync with external 'current' prop if not dragging
   useEffect(() => {
@@ -56,47 +64,86 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     return `${valToFormat}/${target} ${unit || ''}`.trim();
   }, [progress, target, unit]);
 
-  // Updated drag handling logic - Combined into a single handler for immediate response
-  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
-    if (!sliderRef.current) return;
+  // Handle drag movement with direction detection
+  const handleDrag = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!sliderRef.current || !isDragging) return;
     
-    // Convert MouseEvent or TouchEvent to clientX
-    let clientX: number;
+    // Get current coordinates
+    let clientX: number, clientY: number;
     if ('touches' in e) {
-      e.preventDefault(); // Prevent scrolling when dragging
       clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
     } else {
-      clientX = 'clientX' in e ? e.clientX : 0;
+      clientX = e.clientX;
+      clientY = e.clientY;
     }
     
-    const rect = sliderRef.current.getBoundingClientRect();
-    const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const newProgress = Math.round(position * target);
-    
-    setProgress(prevProgress => {
-      if (newProgress !== prevProgress) {
-        if (onProgressChange) onProgressChange(newProgress);
-        return newProgress;
+    // If we haven't locked direction yet, determine if this is horizontal or vertical
+    if (!gestureRef.current.isDirectionLocked) {
+      const deltaX = Math.abs(clientX - gestureRef.current.startX);
+      const deltaY = Math.abs(clientY - gestureRef.current.startY);
+      
+      // Lock direction once we have a clear gesture (with a small threshold)
+      if (deltaX > 5 || deltaY > 5) {
+        gestureRef.current.isDirectionLocked = true;
+        gestureRef.current.isHorizontalDrag = deltaX > deltaY;
+        
+        // If vertical movement dominant, cancel drag operation
+        if (!gestureRef.current.isHorizontalDrag) {
+          handleDragEnd();
+          return;
+        }
       }
-      return prevProgress;
-    });
-  }, [target, onProgressChange]);
+    }
+    
+    // Only process horizontal drags
+    if (gestureRef.current.isDirectionLocked && gestureRef.current.isHorizontalDrag) {
+      e.preventDefault(); // Prevent scrolling only when we confirm horizontal drag
+      
+      const rect = sliderRef.current.getBoundingClientRect();
+      const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const newProgress = Math.round(position * target);
+      
+      setProgress(prevProgress => {
+        if (newProgress !== prevProgress) {
+          if (onProgressChange) onProgressChange(newProgress);
+          return newProgress;
+        }
+        return prevProgress;
+      });
+    }
+  }, [isDragging, target, onProgressChange]);
 
   // Handle drag end
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
+    gestureRef.current.isDirectionLocked = false;
+    gestureRef.current.isHorizontalDrag = false;
+    
     document.removeEventListener('mousemove', handleDrag);
     document.removeEventListener('mouseup', handleDragEnd);
     document.removeEventListener('touchmove', handleDrag);
     document.removeEventListener('touchend', handleDragEnd);
   }, [handleDrag]);
 
-  // Handle drag start - Immediately update progress and set up listeners
+  // Handle drag start - Store initial position and set up listeners
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    setIsDragging(true);
+    // Get starting coordinates
+    let clientX: number, clientY: number;
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
     
-    // Immediately update progress on first touch
-    handleDrag(e);
+    // Store starting position for direction detection
+    gestureRef.current.startX = clientX;
+    gestureRef.current.startY = clientY;
+    gestureRef.current.isDirectionLocked = false;
+    
+    setIsDragging(true);
     
     // Add event listeners for continued dragging
     document.addEventListener('mousemove', handleDrag);
