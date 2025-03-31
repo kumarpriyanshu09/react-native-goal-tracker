@@ -8,6 +8,7 @@ interface ProgressSliderProps {
   unit?: string;
   color?: string;
   onProgressChange?: (newProgress: number) => void;
+  text?: string;
 }
 
 // Simplified Progress Slider Component
@@ -16,7 +17,8 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
   target = 100,
   unit = "min",
   color = "#9b87f5",
-  onProgressChange
+  onProgressChange,
+  text
 }) => {
   const [progress, setProgress] = useState(current);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,12 +48,12 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
           if (hours > 0 && minutes === 0) text = `${hours}h`;
           return text || '0m';
         };
-        return `${formatTime(valToFormat)} / ${formatTime(target)}`;
+        return `${formatTime(valToFormat)}/${formatTime(target)}`;
       }
-      return `${valToFormat}${unit} / ${target}${unit}`;
+      return `${valToFormat}/${target}${unit}`;
     }
     if (unit === "dots") return `${valToFormat}/${target}`;
-    return `${valToFormat} / ${target} ${unit || ''}`.trim();
+    return `${valToFormat}/${target} ${unit || ''}`.trim();
   }, [progress, target, unit]);
 
   // Drag Handling Logic - Define in order of dependency
@@ -99,42 +101,63 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     document.addEventListener('touchend', handleDragEnd);
   }, [updateProgressFromEvent, handleDragMove, handleDragEnd]);
 
-  // Component Rendering (simplified design)
+  // Component Rendering with new design inspired by the reference image
   return (
     <div
-      className="relative h-16 w-full rounded-xl overflow-hidden shadow-md select-none cursor-grab active:cursor-grabbing mb-2 mx-1"
+      className="relative h-14 w-full rounded-xl overflow-hidden shadow-sm select-none cursor-grab active:cursor-grabbing mx-1 flex"
       ref={sliderRef}
       role="slider"
       aria-valuemin={0}
       aria-valuemax={target}
       aria-valuenow={progress}
-      aria-label={`Progress slider`}
+      aria-label={`Progress slider for ${text || 'goal'}`}
       style={{
         touchAction: 'pan-y',
       }}
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
     >
-      {/* Background Layer */}
-      <div className="absolute inset-0 flex pointer-events-none">
-        <div
-          className="h-full"
-          style={{
-            backgroundColor: color,
-            width: `${percentage}%`,
-            transition: isDragging ? 'none' : 'width 0.2s ease-out',
-          }}
-        />
-        <div
-          className="h-full flex-grow bg-muted"
-        />
+      {/* Colored Progress Section */}
+      <div
+        className="h-full flex items-center pl-4"
+        style={{
+          backgroundColor: color,
+          width: `${percentage}%`,
+          transition: isDragging ? 'none' : 'width 0.2s ease-out',
+        }}
+      >
+        {text && (
+          <div className="flex items-center space-x-2 text-white font-medium">
+            {text}
+          </div>
+        )}
       </div>
-
-      {/* Content Layer (Text Overlay) - Simple progress display */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-lg font-medium text-foreground bg-black/10 px-3 py-1 rounded-full">
+      
+      {/* Darker Background Section */}
+      <div
+        className="h-full flex-grow flex items-center justify-end pr-4"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        }}
+      >
+        <span className="text-white font-medium">
           {formatProgress()}
         </span>
+      </div>
+      
+      {/* Progress Dots for Visual Feedback */}
+      <div className="absolute bottom-2 right-2 flex space-x-1">
+        {Array(Math.min(6, target)).fill(0).map((_, i) => (
+          <div 
+            key={i} 
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              backgroundColor: i < percentage / (100 / Math.min(6, target)) 
+                ? 'white' 
+                : 'rgba(255, 255, 255, 0.3)',
+            }}
+          />
+        ))}
       </div>
     </div>
   );

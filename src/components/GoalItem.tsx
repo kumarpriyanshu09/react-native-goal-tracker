@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ProgressSlider from '@/components/ProgressSlider';
 import { Goal } from '@/types';
@@ -27,8 +27,10 @@ export function GoalItem({ goal, onToggle, onProgressChange }: GoalItemProps) {
       return { color: '#0A84FF' }; // Blue
     if (lowerText.includes('weight') || lowerText.includes('gym') || lowerText.includes('workout')) 
       return { color: '#FF453A' }; // Red
-    if (lowerText.includes('code') || lowerText.includes('develop')) 
-      return { color: '#66D4CF' }; // Cyan
+    if (lowerText.includes('code') || lowerText.includes('develop') || lowerText.includes('deep') || lowerText.includes('work')) 
+      return { color: '#1d2f6f' }; // Deep Blue
+    if (lowerText.includes('nlp')) 
+      return { color: '#42D6BA' }; // Teal
     
     return { color: '#9b87f5' }; // Default purple
   }, [goal.text]);
@@ -38,7 +40,7 @@ export function GoalItem({ goal, onToggle, onProgressChange }: GoalItemProps) {
     
     const lowerText = goal.text.toLowerCase();
     if (lowerText.includes('km') || lowerText.includes('kilometer')) return 'km';
-    if (lowerText.includes('miles')) return 'miles';
+    if (lowerText.includes('miles') || lowerText.includes('mile')) return 'mile';
     if (lowerText.includes('steps')) return 'steps';
     if (lowerText.includes('chapter')) return 'chapter';
     if (lowerText.includes('page')) return 'pages';
@@ -60,6 +62,23 @@ export function GoalItem({ goal, onToggle, onProgressChange }: GoalItemProps) {
     }
   };
 
+  // If the goal has progress, render the new progress slider
+  if (goal.hasProgress) {
+    return (
+      <div className="my-3">
+        <ProgressSlider
+          current={goal.current || 0}
+          target={goal.target || 100}
+          unit={unit}
+          color={color}
+          text={goal.text}
+          onProgressChange={(newProgress) => onProgressChange(goal.id, newProgress)}
+        />
+      </div>
+    );
+  }
+
+  // For goals without progress, render the simple toggle button
   return (
     <div className={`border-b border-border py-2 ${goal.isCompleted ? 'opacity-60' : ''}`}>
       <div className="flex justify-between items-center">
@@ -84,18 +103,6 @@ export function GoalItem({ goal, onToggle, onProgressChange }: GoalItemProps) {
           </span>
         </button>
       </div>
-
-      {goal.hasProgress && (
-        <div className="mt-1">
-          <ProgressSlider
-            current={goal.current || 0}
-            target={goal.target || 100}
-            unit={unit}
-            color={color}
-            onProgressChange={(newProgress) => onProgressChange(goal.id, newProgress)}
-          />
-        </div>
-      )}
     </div>
   );
 };
