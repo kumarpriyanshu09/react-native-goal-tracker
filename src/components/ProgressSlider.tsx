@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useTheme } from '@/context/ThemeContext'; // Import useTheme
+import { useTheme } from '@/context/ThemeContext';
 
 // Define the props type
 interface ProgressSliderProps {
   activity: string;
   emoji?: string;
-  color: string; // This will come from the app's theme/goal data
+  color: string;
   current?: number;
   target?: number;
   unit?: string;
-  // darkMode prop is removed, will use context instead
   autoIncrement?: boolean;
   incrementSpeed?: number;
-  onProgressChange?: (newProgress: number) => void; // Callback to update progress
+  onProgressChange?: (newProgress: number) => void;
 }
 
 // Draggable Progress Slider Component
@@ -23,7 +22,6 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
   current = 0,
   target = 100,
   unit = "min",
-  // darkMode prop removed
   autoIncrement = false,
   incrementSpeed = 1000,
   onProgressChange
@@ -103,7 +101,7 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
     const newProgress = Math.round(position * target);
     setProgress(prevProgress => {
         if (newProgress !== prevProgress) {
-            if (onProgressChange) onProgressChange(newProgress); // Call parent callback
+            if (onProgressChange) onProgressChange(newProgress);
             return newProgress;
         }
         return prevProgress;
@@ -113,8 +111,7 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
   // Define handleDragMove after updateProgressFromEvent
   const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
      if (isDragging) {
-        if ('touches' in e) e.preventDefault(); // Prevent scroll hijack on touch
-        // Need to cast e because the event listeners expect generic Event
+        if ('touches' in e) e.preventDefault();
         updateProgressFromEvent(e as unknown as React.MouseEvent | React.TouchEvent);
      }
   }, [isDragging, updateProgressFromEvent]);
@@ -128,27 +125,22 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
         document.removeEventListener('touchmove', handleDragMove);
         document.removeEventListener('touchend', handleDragEnd);
     }
-  }, [isDragging, handleDragMove]); // Depends on handleDragMove
+  }, [isDragging, handleDragMove]);
 
   // Define handleDragStart last, as it depends on the others
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Don't prevent default on touchstart immediately, allow potential scroll
-    // e.preventDefault();
     setIsDragging(true);
-    updateProgressFromEvent(e); // Update on initial click/touch
+    updateProgressFromEvent(e);
     document.addEventListener('mousemove', handleDragMove);
     document.addEventListener('mouseup', handleDragEnd);
-    // Use passive: false for touchmove ONLY if we preventDefault inside handleDragMove
     document.addEventListener('touchmove', handleDragMove, { passive: false });
     document.addEventListener('touchend', handleDragEnd);
-  }, [updateProgressFromEvent, handleDragMove, handleDragEnd]); // Depends on all three
+  }, [updateProgressFromEvent, handleDragMove, handleDragEnd]);
 
   // Component Rendering (with separate background and content layers)
   return (
     <div
-      // Use bg-card for the base container to match other elements? Or keep it transparent?
-      // Let's keep it simple for now, background is handled by layers below.
-      className="relative mb-4 h-16 rounded-2xl overflow-hidden shadow-lg select-none cursor-grab active:cursor-grabbing" // Base container
+      className="relative mb-4 h-16 rounded-2xl overflow-hidden shadow-lg select-none cursor-grab active:cursor-grabbing"
       ref={sliderRef}
       role="slider"
       aria-valuemin={0}
@@ -156,22 +148,22 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
       aria-valuenow={progress}
       aria-label={`${activity} progress`}
       style={{
-        touchAction: 'pan-y', // Allow vertical scroll while grabbing horizontally
+        touchAction: 'pan-y',
       }}
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
     >
       {/* Background Layer */}
       <div className="absolute inset-0 flex pointer-events-none">
-        <div // Colored part
+        <div
           className="h-full"
           style={{
-            backgroundColor: color, // Use the dynamic color passed in props
+            backgroundColor: color,
             width: `${percentage}%`,
             transition: isDragging ? 'none' : 'width 0.2s ease-out',
           }}
         />
-        <div // Unfilled background part - Use theme's muted color
+        <div
           className="h-full flex-grow bg-muted"
         />
       </div>
@@ -181,14 +173,12 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
         {/* Left Content */}
         <div className="flex items-center overflow-hidden whitespace-nowrap mr-2">
           {emoji && <span className="mr-2 text-xl flex-shrink-0" aria-hidden="true">{emoji}</span>}
-          {/* Use theme's foreground color for main text */}
           <span className="text-lg sm:text-xl font-medium truncate text-foreground">
             {activity}
           </span>
         </div>
         {/* Right Content */}
         <div className="overflow-hidden whitespace-nowrap">
-           {/* Use theme's muted foreground color for progress text */}
           <span className="text-base sm:text-lg font-medium text-muted-foreground truncate">
             {formatProgress()}
           </span>
@@ -201,9 +191,8 @@ const ProgressSlider: React.FC<ProgressSliderProps> = ({
           {Array.from({ length: target }).map((_, i) => (
             <div
               key={i}
-              // Use theme's muted color for unfilled dots
               className={`h-1.5 w-1.5 rounded-full ${i < progress ? '' : 'bg-muted'}`}
-              style={{ backgroundColor: i < progress ? color : undefined }} // Use dynamic color for filled dots
+              style={{ backgroundColor: i < progress ? color : undefined }}
             />
           ))}
         </div>

@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Check, Circle, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ProgressSlider } from '@/components/ProgressSlider';
+import ProgressSlider from '@/components/ProgressSlider';
 import { Goal } from '@/types';
 
 interface GoalItemProps {
