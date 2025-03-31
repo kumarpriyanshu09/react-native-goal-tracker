@@ -56,50 +56,54 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     return `${valToFormat}/${target} ${unit || ''}`.trim();
   }, [progress, target, unit]);
 
-  // Drag Handling Logic - Define in order of dependency
-  const updateProgressFromEvent = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  // Updated drag handling logic - Combined into a single handler for immediate response
+  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
     if (!sliderRef.current) return;
+    
+    // Convert MouseEvent or TouchEvent to clientX
+    let clientX: number;
+    if ('touches' in e) {
+      e.preventDefault(); // Prevent scrolling when dragging
+      clientX = e.touches[0].clientX;
+    } else {
+      clientX = 'clientX' in e ? e.clientX : 0;
+    }
+    
     const rect = sliderRef.current.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const newProgress = Math.round(position * target);
+    
     setProgress(prevProgress => {
-        if (newProgress !== prevProgress) {
-            if (onProgressChange) onProgressChange(newProgress);
-            return newProgress;
-        }
-        return prevProgress;
+      if (newProgress !== prevProgress) {
+        if (onProgressChange) onProgressChange(newProgress);
+        return newProgress;
+      }
+      return prevProgress;
     });
   }, [target, onProgressChange]);
 
-  // Define handleDragMove after updateProgressFromEvent
-  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
-     if (isDragging) {
-        if ('touches' in e) e.preventDefault();
-        updateProgressFromEvent(e as unknown as React.MouseEvent | React.TouchEvent);
-     }
-  }, [isDragging, updateProgressFromEvent]);
-
-  // Define handleDragEnd after handleDragMove
+  // Handle drag end
   const handleDragEnd = useCallback(() => {
-    if (isDragging) {
-        setIsDragging(false);
-        document.removeEventListener('mousemove', handleDragMove);
-        document.removeEventListener('mouseup', handleDragEnd);
-        document.removeEventListener('touchmove', handleDragMove);
-        document.removeEventListener('touchend', handleDragEnd);
-    }
-  }, [isDragging, handleDragMove]);
+    setIsDragging(false);
+    document.removeEventListener('mousemove', handleDrag);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchmove', handleDrag);
+    document.removeEventListener('touchend', handleDragEnd);
+  }, [handleDrag]);
 
-  // Define handleDragStart last, as it depends on the others
+  // Handle drag start - Immediately update progress and set up listeners
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
-    updateProgressFromEvent(e);
-    document.addEventListener('mousemove', handleDragMove);
+    
+    // Immediately update progress on first touch
+    handleDrag(e);
+    
+    // Add event listeners for continued dragging
+    document.addEventListener('mousemove', handleDrag);
     document.addEventListener('mouseup', handleDragEnd);
-    document.addEventListener('touchmove', handleDragMove, { passive: false });
+    document.addEventListener('touchmove', handleDrag, { passive: false });
     document.addEventListener('touchend', handleDragEnd);
-  }, [updateProgressFromEvent, handleDragMove, handleDragEnd]);
+  }, [handleDrag, handleDragEnd]);
 
   // Component Rendering with improved design
   return (
