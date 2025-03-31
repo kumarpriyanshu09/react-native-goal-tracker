@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react'; // Removed useEffect
+import React, { useState, useMemo, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
-import { useTheme } from '@/context/ThemeContext'; // Import useTheme
+import { useTheme } from '@/context/ThemeContext';
 import { TodoItem } from '@/components/TodoItem';
 import { GoalItem } from '@/components/GoalItem';
 import { AddItemButton } from '@/components/AddItemButton';
@@ -13,9 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const Index = () => {
   const { toast } = useToast();
-  const { isDarkMode, toggleTheme } = useTheme(); // Use theme context
+  const { isDarkMode, toggleTheme } = useTheme();
 
-  // Date and tab state
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -23,10 +22,8 @@ const Index = () => {
   });
   const [activeTab, setActiveTab] = useState<TabType>('Tasks');
   
-  // Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Sample data
   const [todoItems, setTodoItems] = useState<Todo[]>([
     { id: 'todo-1', text: 'Plan day & Prioritize tasks', isCompleted: false, time: '9:00 AM' },
     { id: 'todo-2', text: 'Morning workout', isCompleted: false, time: null },
@@ -43,8 +40,7 @@ const Index = () => {
       hasProgress: true, 
       current: 1.2, 
       target: 5, 
-      unit: 'km', 
-      autoIncrement: false 
+      unit: 'km'
     },
     { 
       id: 'goal-2', 
@@ -53,8 +49,7 @@ const Index = () => {
       hasProgress: true, 
       current: 12, 
       target: 30, 
-      unit: 'pages', 
-      autoIncrement: false 
+      unit: 'pages'
     },
     { 
       id: 'goal-3', 
@@ -63,8 +58,7 @@ const Index = () => {
       hasProgress: true, 
       current: 5, 
       target: 15, 
-      unit: 'min', 
-      autoIncrement: true 
+      unit: 'min'
     },
     { 
       id: 'goal-4', 
@@ -73,8 +67,7 @@ const Index = () => {
       hasProgress: true, 
       current: 3, 
       target: 8, 
-      unit: 'glass', 
-      autoIncrement: false 
+      unit: 'glass'
     },
     { 
       id: 'goal-5', 
@@ -84,18 +77,11 @@ const Index = () => {
     }
   ]);
 
-  // Theme toggling is now handled by useTheme hook
-
-  // Update document theme is now handled by ThemeProvider
-
-  // Date selection
   const handleDateSelect = useCallback((date: Date) => {
     date.setHours(0, 0, 0, 0);
     setSelectedDate(date);
-    // In a real app, we would fetch data for the selected date here
   }, []);
 
-  // Toggle completion status
   const handleToggleComplete = useCallback((id: string) => {
     if (activeTab === 'Tasks') {
       setTodoItems(items => 
@@ -130,7 +116,6 @@ const Index = () => {
     }
   }, [activeTab, todoItems, goalItems, toast]);
 
-  // Update goal progress
   const handleGoalProgressChange = useCallback((id: string, newProgress: number) => {
     setGoalItems(items =>
       items.map(item => {
@@ -138,7 +123,6 @@ const Index = () => {
           const updatedProgress = Math.min(item.target || 0, Math.max(0, newProgress));
           const isNowCompleted = updatedProgress >= (item.target || 0);
           
-          // Show toast if completed through progress
           if (isNowCompleted && !item.isCompleted) {
             toast({
               title: "Goal completed!",
@@ -158,25 +142,6 @@ const Index = () => {
     );
   }, [toast]);
 
-  // Toggle auto-increment
-  const toggleAutoIncrement = useCallback((id: string) => {
-    setGoalItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, autoIncrement: !item.autoIncrement } : item
-      )
-    );
-    
-    const item = goalItems.find(item => item.id === id);
-    if (item) {
-      toast({
-        title: `Auto-progress ${item.autoIncrement ? 'disabled' : 'enabled'}`,
-        description: item.text,
-        duration: 2000,
-      });
-    }
-  }, [goalItems, toast]);
-
-  // Add new todo
   const handleAddTodo = useCallback((todo: Omit<Todo, 'id'>) => {
     const newTodo = {
       ...todo,
@@ -192,7 +157,6 @@ const Index = () => {
     });
   }, [toast]);
 
-  // Add new goal
   const handleAddGoal = useCallback((goal: Omit<Goal, 'id'>) => {
     const newGoal = {
       ...goal,
@@ -208,7 +172,6 @@ const Index = () => {
     });
   }, [toast]);
 
-  // Sort items: incomplete first, then by time or text
   const sortItems = useCallback(<T extends Todo | Goal>(items: T[]): T[] => {
     return [...items].sort((a, b) => {
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
@@ -224,13 +187,11 @@ const Index = () => {
   const sortedTodos = useMemo(() => sortItems(todoItems), [todoItems, sortItems]);
   const sortedGoals = useMemo(() => sortItems(goalItems), [goalItems, sortItems]);
 
-  // Data for the header
   const activeViewData = useMemo(() => ({
     type: activeTab,
     count: (activeTab === 'Tasks' ? todoItems : goalItems).filter(item => !item.isCompleted).length,
   }), [activeTab, todoItems, goalItems]);
 
-  // Handle tab change
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
   }, []);
@@ -241,8 +202,6 @@ const Index = () => {
         selectedDate={selectedDate}
         onDateSelect={handleDateSelect}
         activeViewData={activeViewData}
-        // isDarkMode and toggleTheme props are no longer needed here
-        // They will be accessed directly in Header via useTheme
       />
       
       <TabNavigation 
@@ -277,7 +236,6 @@ const Index = () => {
                   goal={goal}
                   onToggle={handleToggleComplete}
                   onProgressChange={handleGoalProgressChange}
-                  onToggleAutoIncrement={toggleAutoIncrement}
                 />
               ))
             ) : (

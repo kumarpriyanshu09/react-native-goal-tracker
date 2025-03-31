@@ -1,35 +1,26 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useTheme } from '@/context/ThemeContext';
 
 // Define the props type
 interface ProgressSliderProps {
-  activity: string;
-  emoji?: string;
-  color: string;
   current?: number;
   target?: number;
   unit?: string;
-  autoIncrement?: boolean;
-  incrementSpeed?: number;
+  color?: string;
   onProgressChange?: (newProgress: number) => void;
 }
 
-// Draggable Progress Slider Component
+// Simplified Progress Slider Component
 export const ProgressSlider: React.FC<ProgressSliderProps> = ({
-  activity,
-  emoji,
-  color,
   current = 0,
   target = 100,
   unit = "min",
-  autoIncrement = false,
-  incrementSpeed = 1000,
+  color = "#9b87f5",
   onProgressChange
 }) => {
   const [progress, setProgress] = useState(current);
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync with external 'current' prop if not dragging
   useEffect(() => {
@@ -37,35 +28,6 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
       setProgress(current);
     }
   }, [current, isDragging]);
-
-  // Auto-increment logic (stops during drag)
-  useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (autoIncrement && !isDragging && progress < target) {
-      intervalRef.current = setInterval(() => {
-        setProgress(prevProgress => {
-          if (prevProgress >= target) {
-              if (intervalRef.current) clearInterval(intervalRef.current);
-              intervalRef.current = null;
-              return prevProgress;
-          }
-          const newProgress = prevProgress + 1;
-          if (onProgressChange) onProgressChange(newProgress);
-          if (newProgress === target && intervalRef.current) {
-              if (intervalRef.current) clearInterval(intervalRef.current);
-              intervalRef.current = null;
-          }
-          return newProgress;
-        });
-      }, incrementSpeed);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [autoIncrement, progress, target, incrementSpeed, onProgressChange, isDragging]);
 
   // Calculations & Formatting
   const percentage = Math.min(100, Math.max(0, Math.round((progress / target) * 100)));
@@ -137,16 +99,16 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     document.addEventListener('touchend', handleDragEnd);
   }, [updateProgressFromEvent, handleDragMove, handleDragEnd]);
 
-  // Component Rendering (with separate background and content layers)
+  // Component Rendering (simplified design)
   return (
     <div
-      className="relative mb-4 h-16 rounded-2xl overflow-hidden shadow-lg select-none cursor-grab active:cursor-grabbing"
+      className="relative h-16 w-full rounded-xl overflow-hidden shadow-md select-none cursor-grab active:cursor-grabbing mb-2 mx-1"
       ref={sliderRef}
       role="slider"
       aria-valuemin={0}
       aria-valuemax={target}
       aria-valuenow={progress}
-      aria-label={`${activity} progress`}
+      aria-label={`Progress slider`}
       style={{
         touchAction: 'pan-y',
       }}
@@ -168,35 +130,12 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
         />
       </div>
 
-      {/* Content Layer (Text Overlay) */}
-      <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-        {/* Left Content */}
-        <div className="flex items-center overflow-hidden whitespace-nowrap mr-2">
-          {emoji && <span className="mr-2 text-xl flex-shrink-0" aria-hidden="true">{emoji}</span>}
-          <span className="text-lg sm:text-xl font-medium truncate text-foreground">
-            {activity}
-          </span>
-        </div>
-        {/* Right Content */}
-        <div className="overflow-hidden whitespace-nowrap">
-          <span className="text-base sm:text-lg font-medium text-muted-foreground truncate">
-            {formatProgress()}
-          </span>
-        </div>
+      {/* Content Layer (Text Overlay) - Simple progress display */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <span className="text-lg font-medium text-foreground bg-black/10 px-3 py-1 rounded-full">
+          {formatProgress()}
+        </span>
       </div>
-
-      {/* Optional Dots Indicator */}
-      {unit === "dots" && (
-        <div className="absolute bottom-2 right-4 flex space-x-1 pointer-events-none">
-          {Array.from({ length: target }).map((_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 w-1.5 rounded-full ${i < progress ? '' : 'bg-muted'}`}
-              style={{ backgroundColor: i < progress ? color : undefined }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
