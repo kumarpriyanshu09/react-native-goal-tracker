@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react'; // Removed useEffect
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
+import { useTheme } from '@/context/ThemeContext'; // Import useTheme
 import { TodoItem } from '@/components/TodoItem';
 import { GoalItem } from '@/components/GoalItem';
 import { AddItemButton } from '@/components/AddItemButton';
@@ -12,16 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const Index = () => {
   const { toast } = useToast();
-  
-  // Theme state
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      return savedTheme ? savedTheme === 'dark' : prefersDark;
-    }
-    return false;
-  });
+  const { isDarkMode, toggleTheme } = useTheme(); // Use theme context
 
   // Date and tab state
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -92,23 +84,9 @@ const Index = () => {
     }
   ]);
 
-  // Theme toggling
-  const toggleTheme = useCallback(() => {
-    setIsDarkMode(prev => {
-      const newMode = !prev;
-      localStorage.setItem('theme', newMode ? 'dark' : 'light');
-      return newMode;
-    });
-  }, []);
+  // Theme toggling is now handled by useTheme hook
 
-  // Update document theme when state changes
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+  // Update document theme is now handled by ThemeProvider
 
   // Date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -263,8 +241,8 @@ const Index = () => {
         selectedDate={selectedDate}
         onDateSelect={handleDateSelect}
         activeViewData={activeViewData}
-        isDarkMode={isDarkMode}
-        toggleTheme={toggleTheme}
+        // isDarkMode and toggleTheme props are no longer needed here
+        // They will be accessed directly in Header via useTheme
       />
       
       <TabNavigation 

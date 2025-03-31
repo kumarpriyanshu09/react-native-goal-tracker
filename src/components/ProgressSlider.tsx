@@ -1,120 +1,81 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTheme } from '@/context/ThemeContext'; // Import useTheme
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
+// Define the props type
 interface ProgressSliderProps {
   activity: string;
-  emoji: string;
-  color: string;
+  emoji?: string;
+  color: string; // This will come from the app's theme/goal data
   current?: number;
   target?: number;
   unit?: string;
+  // darkMode prop is removed, will use context instead
   autoIncrement?: boolean;
   incrementSpeed?: number;
-  onProgressChange: (newProgress: number) => void;
+  onProgressChange?: (newProgress: number) => void; // Callback to update progress
 }
 
-export function ProgressSlider({
+// Draggable Progress Slider Component
+const ProgressSlider: React.FC<ProgressSliderProps> = ({
   activity,
   emoji,
   color,
   current = 0,
   target = 100,
   unit = "min",
+  // darkMode prop removed
   autoIncrement = false,
   incrementSpeed = 1000,
   onProgressChange
-}: ProgressSliderProps) {
-  const [sliderValue, setSliderValue] = useState(current);
+}) => {
+  const [progress, setProgress] = useState(current);
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<number | null>(null);
-  
-  const isCompleted = sliderValue >= target;
-  const percentage = Math.min(100, (sliderValue / target) * 100);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Update when props change
+  // Sync with external 'current' prop if not dragging
   useEffect(() => {
     if (!isDragging) {
-      setSliderValue(current);
+      setProgress(current);
     }
   }, [current, isDragging]);
 
-  // Handle auto-increment
+  // Auto-increment logic (stops during drag)
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-
-    if (autoIncrement && !isDragging && sliderValue < target) {
-      intervalRef.current = window.setInterval(() => {
-        setSliderValue(prev => {
-          const newValue = Math.min(target, prev + 1);
-          if (newValue !== prev) {
-            onProgressChange(newValue);
+    if (autoIncrement && !isDragging && progress < target) {
+      intervalRef.current = setInterval(() => {
+        setProgress(prevProgress => {
+          if (prevProgress >= target) {
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              intervalRef.current = null;
+              return prevProgress;
           }
-          if (newValue >= target && intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+          const newProgress = prevProgress + 1;
+          if (onProgressChange) onProgressChange(newProgress);
+          if (newProgress === target && intervalRef.current) {
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              intervalRef.current = null;
           }
-          return newValue;
+          return newProgress;
         });
       }, incrementSpeed);
     }
-
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [autoIncrement, isDragging, sliderValue, target, incrementSpeed, onProgressChange]);
+  }, [autoIncrement, progress, target, incrementSpeed, onProgressChange, isDragging]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!sliderRef.current) return;
-    
-    setIsDragging(true);
-    const rect = sliderRef.current.getBoundingClientRect();
-    const pos = ((e.clientX - rect.left) / rect.width) * target;
-    const newValue = Math.max(0, Math.min(target, Math.round(pos)));
-    
-    setSliderValue(newValue);
-    onProgressChange(newValue);
-    
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
+  // Calculations & Formatting
+  const percentage = Math.min(100, Math.max(0, Math.round((progress / target) * 100)));
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !sliderRef.current) return;
-    
-    const rect = sliderRef.current.getBoundingClientRect();
-    const pos = ((e.clientX - rect.left) / rect.width) * target;
-    const newValue = Math.max(0, Math.min(target, Math.round(pos)));
-    
-    setSliderValue(newValue);
-    onProgressChange(newValue);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  const formatProgress = () => {
-    const roundedValue = Math.round(sliderValue);
-    const roundedTarget = Math.round(target);
-
+  const formatProgress = useCallback((value?: number) => {
+    const valToFormat = value !== undefined ? value : progress;
     if (unit === "min") {
-      if (roundedTarget >= 60) {
+      if (target >= 60) {
         const formatTime = (totalMinutes: number) => {
           if (totalMinutes <= 0) return '0m';
           const hours = Math.floor(totalMinutes / 60);
@@ -125,69 +86,130 @@ export function ProgressSlider({
           if (hours > 0 && minutes === 0) text = `${hours}h`;
           return text || '0m';
         };
-        return `${formatTime(roundedValue)} / ${formatTime(roundedTarget)}`;
+        return `${formatTime(valToFormat)} / ${formatTime(target)}`;
       }
-      return `${roundedValue}${unit} / ${roundedTarget}${unit}`;
+      return `${valToFormat}${unit} / ${target}${unit}`;
     }
-    
-    if (unit === "dots") return `${roundedValue}/${roundedTarget}`;
-    
-    if (unit === "km" || unit === "miles") 
-      return `${sliderValue.toFixed(1)}${unit} / ${target.toFixed(1)}${unit}`;
-    
-    return `${roundedValue} / ${roundedTarget} ${unit}`;
-  };
+    if (unit === "dots") return `${valToFormat}/${target}`;
+    return `${valToFormat} / ${target} ${unit || ''}`.trim();
+  }, [progress, target, unit]);
 
+  // Drag Handling Logic - Define in order of dependency
+  const updateProgressFromEvent = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!sliderRef.current) return;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const newProgress = Math.round(position * target);
+    setProgress(prevProgress => {
+        if (newProgress !== prevProgress) {
+            if (onProgressChange) onProgressChange(newProgress); // Call parent callback
+            return newProgress;
+        }
+        return prevProgress;
+    });
+  }, [target, onProgressChange]);
+
+  // Define handleDragMove after updateProgressFromEvent
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+     if (isDragging) {
+        if ('touches' in e) e.preventDefault(); // Prevent scroll hijack on touch
+        // Need to cast e because the event listeners expect generic Event
+        updateProgressFromEvent(e as unknown as React.MouseEvent | React.TouchEvent);
+     }
+  }, [isDragging, updateProgressFromEvent]);
+
+  // Define handleDragEnd after handleDragMove
+  const handleDragEnd = useCallback(() => {
+    if (isDragging) {
+        setIsDragging(false);
+        document.removeEventListener('mousemove', handleDragMove);
+        document.removeEventListener('mouseup', handleDragEnd);
+        document.removeEventListener('touchmove', handleDragMove);
+        document.removeEventListener('touchend', handleDragEnd);
+    }
+  }, [isDragging, handleDragMove]); // Depends on handleDragMove
+
+  // Define handleDragStart last, as it depends on the others
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Don't prevent default on touchstart immediately, allow potential scroll
+    // e.preventDefault();
+    setIsDragging(true);
+    updateProgressFromEvent(e); // Update on initial click/touch
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    // Use passive: false for touchmove ONLY if we preventDefault inside handleDragMove
+    document.addEventListener('touchmove', handleDragMove, { passive: false });
+    document.addEventListener('touchend', handleDragEnd);
+  }, [updateProgressFromEvent, handleDragMove, handleDragEnd]); // Depends on all three
+
+  // Component Rendering (with separate background and content layers)
   return (
-    <div 
+    <div
+      // Use bg-card for the base container to match other elements? Or keep it transparent?
+      // Let's keep it simple for now, background is handled by layers below.
+      className="relative mb-4 h-16 rounded-2xl overflow-hidden shadow-lg select-none cursor-grab active:cursor-grabbing" // Base container
       ref={sliderRef}
-      className="relative h-14 rounded-xl overflow-hidden cursor-pointer transition-opacity"
-      onMouseDown={handleMouseDown}
+      role="slider"
+      aria-valuemin={0}
+      aria-valuemax={target}
+      aria-valuenow={progress}
+      aria-label={`${activity} progress`}
+      style={{
+        touchAction: 'pan-y', // Allow vertical scroll while grabbing horizontally
+      }}
+      onMouseDown={handleDragStart}
+      onTouchStart={handleDragStart}
     >
-      {/* Background */}
-      <div className="absolute inset-0 bg-muted"></div>
-      
-      {/* Progress */}
-      <div 
-        className="absolute inset-y-0 left-0 transition-all duration-300 ease-out"
-        style={{ 
-          width: `${percentage}%`, 
-          backgroundColor: isCompleted ? '#34C759' : color 
-        }}
-      ></div>
-      
-      {/* Content */}
-      <div className="absolute inset-0 flex items-center justify-between px-4 z-10">
-        <div className="flex items-center space-x-2 overflow-hidden">
-          <span className="text-lg">{emoji}</span>
-          <span className="text-sm font-medium truncate">{activity}</span>
+      {/* Background Layer */}
+      <div className="absolute inset-0 flex pointer-events-none">
+        <div // Colored part
+          className="h-full"
+          style={{
+            backgroundColor: color, // Use the dynamic color passed in props
+            width: `${percentage}%`,
+            transition: isDragging ? 'none' : 'width 0.2s ease-out',
+          }}
+        />
+        <div // Unfilled background part - Use theme's muted color
+          className="h-full flex-grow bg-muted"
+        />
+      </div>
+
+      {/* Content Layer (Text Overlay) */}
+      <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
+        {/* Left Content */}
+        <div className="flex items-center overflow-hidden whitespace-nowrap mr-2">
+          {emoji && <span className="mr-2 text-xl flex-shrink-0" aria-hidden="true">{emoji}</span>}
+          {/* Use theme's foreground color for main text */}
+          <span className="text-lg sm:text-xl font-medium truncate text-foreground">
+            {activity}
+          </span>
         </div>
-        <div>
-          {isCompleted ? (
-            <Check size={18} className="text-white" />
-          ) : (
-            <span className="text-sm font-medium text-muted-foreground">
-              {formatProgress()}
-            </span>
-          )}
+        {/* Right Content */}
+        <div className="overflow-hidden whitespace-nowrap">
+           {/* Use theme's muted foreground color for progress text */}
+          <span className="text-base sm:text-lg font-medium text-muted-foreground truncate">
+            {formatProgress()}
+          </span>
         </div>
       </div>
-      
-      {/* Dots for "dots" unit */}
-      {unit === "dots" && !isCompleted && (
-        <div className="absolute bottom-2 right-4 flex space-x-1">
+
+      {/* Optional Dots Indicator */}
+      {unit === "dots" && (
+        <div className="absolute bottom-2 right-4 flex space-x-1 pointer-events-none">
           {Array.from({ length: target }).map((_, i) => (
             <div
               key={i}
-              className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                i < sliderValue ? "opacity-100" : "opacity-40"
-              )}
-              style={{ backgroundColor: i < sliderValue ? color : 'currentColor' }}
+              // Use theme's muted color for unfilled dots
+              className={`h-1.5 w-1.5 rounded-full ${i < progress ? '' : 'bg-muted'}`}
+              style={{ backgroundColor: i < progress ? color : undefined }} // Use dynamic color for filled dots
             />
           ))}
         </div>
       )}
     </div>
   );
-}
+};
+
+export default ProgressSlider;

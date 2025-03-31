@@ -2,27 +2,46 @@
 import React, { useMemo } from 'react';
 import { 
   Sun, 
-  Moon 
+  Moon,
+  Settings // Added Settings icon
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+// Removed unused Card import
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetDescription, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from "@/components/ui/sheet"; // Added Sheet components
 import { DateSelector } from "@/components/DateSelector";
+import { useTheme, ThemeColor } from '@/context/ThemeContext'; // Import useTheme and ThemeColor type
+import { Label } from "@/components/ui/label"; // Import Label for section title
+
+// Define available theme colors and their display properties
+const themeOptions: { value: ThemeColor; label: string; colorClass: string }[] = [
+  { value: 'purple', label: 'Purple', colorClass: 'bg-[#7C3AED]' }, // Example Tailwind purple-600
+  { value: 'orange', label: 'Orange', colorClass: 'bg-[#F97316]' }, // Example Tailwind orange-500
+  { value: 'blue',   label: 'Blue',   colorClass: 'bg-[#3B82F6]' }, // Example Tailwind blue-500
+  { value: 'green',  label: 'Green',  colorClass: 'bg-[#10B981]' }, // Example Tailwind emerald-500
+];
 
 interface HeaderProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   activeViewData: { type: string; count: number };
-  isDarkMode: boolean;
-  toggleTheme: () => void;
+  // Removed isDarkMode and toggleTheme from props
 }
 
 export function Header({ 
   selectedDate, 
   onDateSelect, 
   activeViewData, 
-  isDarkMode, 
-  toggleTheme 
+  // Removed isDarkMode and toggleTheme from parameters
 }: HeaderProps) {
+  const { isDarkMode, toggleTheme, themeColor, setThemeColor } = useTheme(); // Use theme context
+
   const { dayName, dateString, yearString } = useMemo(() => ({
     dayName: selectedDate.toLocaleDateString('en-US', { weekday: 'long' }),
     dateString: selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
@@ -64,6 +83,45 @@ export function Header({
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </Button>
+          {/* Settings Sheet */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="mt-1 ml-2" // Added margin
+              >
+                <Settings size={18} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>App Settings</SheetTitle>
+                <SheetDescription>
+                  Customize the look and feel of your app.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="py-4 space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Theme Color</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {themeOptions.map((option) => (
+                      <Button
+                        key={option.value}
+                        variant={themeColor === option.value ? 'default' : 'outline'}
+                        onClick={() => setThemeColor(option.value)}
+                        className="justify-start"
+                      >
+                        <span className={`w-4 h-4 rounded-full mr-2 ${option.colorClass}`}></span>
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                {/* Add other settings sections here if needed */}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
         
         {/* Middle Row */}

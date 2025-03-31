@@ -14,8 +14,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 272 70% 75%;
-    --primary-foreground: 210 40% 98%;
+    /* Use dynamic hue for primary color */
+    --primary: var(--color-primary-hue, 272) 70% 75%; /* Default to 272 if variable not set */
+    --primary-foreground: 210 40% 98%; /* Keep foreground consistent for now */
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -31,7 +32,8 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 272 70% 75%;
+    /* Use dynamic hue for ring color */
+    --ring: var(--color-primary-hue, 272) 70% 75%; /* Default to 272 if variable not set */
 
     --radius: 0.5rem;
   }
@@ -46,8 +48,9 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 272 70% 75%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Use dynamic hue for primary color in dark mode */
+    --primary: var(--color-primary-hue, 272) 70% 75%; /* Default to 272 if variable not set */
+    --primary-foreground: 222.2 47.4% 11.2%; /* Keep foreground consistent for now */
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -63,7 +66,8 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 272 70% 75%;
+    /* Use dynamic hue for ring color in dark mode */
+    --ring: var(--color-primary-hue, 272) 70% 75%; /* Default to 272 if variable not set */
   }
 }
 
