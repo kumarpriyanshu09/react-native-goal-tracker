@@ -91,7 +91,7 @@ export function AddJournalEntryModal({ isOpen, onClose, onAdd }: AddJournalEntry
               {formattedDate}
             </SheetTitle>
             
-            <Button variant="primary" size="sm" className="rounded-full" onClick={handleSubmit}>
+            <Button variant="default" size="sm" className="rounded-full" onClick={handleSubmit}>
               Save
             </Button>
           </div>
