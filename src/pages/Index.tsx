@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { Header } from '@/components/Header';
@@ -174,12 +175,20 @@ const Index = () => {
 
   const sortItems = useCallback(<T extends Todo | Goal>(items: T[]): T[] => {
     return [...items].sort((a, b) => {
+      // First, sort completed items to the bottom
       if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
       
-      if ('time' in a && 'time' in b && a.time && b.time) {
-        return a.time.localeCompare(b.time);
+      // Then sort by time if available (for todos)
+      if ('time' in a && 'time' in b) {
+        if (a.time && b.time) {
+          return a.time.localeCompare(b.time);
+        }
+        // Items with time come before items without time
+        if (a.time) return -1;
+        if (b.time) return 1;
       }
       
+      // Finally sort alphabetically by text
       return a.text.localeCompare(b.text);
     });
   }, []);

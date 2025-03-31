@@ -65,7 +65,7 @@ export function GoalItem({ goal, onToggle, onProgressChange }: GoalItemProps) {
   // If the goal has progress, render the new progress slider
   if (goal.hasProgress) {
     return (
-      <div className="my-3">
+      <div className={`my-3 ${goal.isCompleted ? 'opacity-60' : ''}`}>
         <ProgressSlider
           current={goal.current || 0}
           target={goal.target || 100}

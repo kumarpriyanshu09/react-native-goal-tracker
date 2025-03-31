@@ -101,7 +101,7 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     document.addEventListener('touchend', handleDragEnd);
   }, [updateProgressFromEvent, handleDragMove, handleDragEnd]);
 
-  // Component Rendering with new design inspired by the reference image
+  // Component Rendering with improved design
   return (
     <div
       className="relative h-14 w-full rounded-xl overflow-hidden shadow-sm select-none cursor-grab active:cursor-grabbing mx-1 flex"
@@ -117,36 +117,43 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
       onMouseDown={handleDragStart}
       onTouchStart={handleDragStart}
     >
-      {/* Colored Progress Section */}
-      <div
-        className="h-full flex items-center pl-4"
-        style={{
-          backgroundColor: color,
-          width: `${percentage}%`,
-          transition: isDragging ? 'none' : 'width 0.2s ease-out',
-        }}
-      >
-        {text && (
-          <div className="flex items-center space-x-2 text-white font-medium">
-            {text}
-          </div>
-        )}
-      </div>
-      
-      {/* Darker Background Section */}
-      <div
-        className="h-full flex-grow flex items-center justify-end pr-4"
-        style={{
+      {/* Colored Progress Section - Full width background with colored progress */}
+      <div 
+        className="absolute inset-0 h-full"
+        style={{ 
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
         }}
-      >
-        <span className="text-white font-medium">
-          {formatProgress()}
-        </span>
+      />
+      
+      {/* Progress bar that stretches from left */}
+      <div
+        className="absolute inset-0 h-full"
+        style={{
+          width: `${percentage}%`,
+          backgroundColor: color,
+          transition: isDragging ? 'none' : 'width 0.2s ease-out',
+        }}
+      />
+      
+      {/* Content layer - fixed position regardless of slider */}
+      <div className="absolute inset-0 flex items-center px-4 z-10">
+        <div className="flex justify-between items-center w-full">
+          {/* Text on the left */}
+          {text && (
+            <div className="text-white font-medium">
+              {text}
+            </div>
+          )}
+          
+          {/* Progress counter on the right */}
+          <div className="text-white font-medium ml-auto">
+            {formatProgress()}
+          </div>
+        </div>
       </div>
       
       {/* Progress Dots for Visual Feedback */}
-      <div className="absolute bottom-2 right-2 flex space-x-1">
+      <div className="absolute bottom-2 right-2 flex space-x-1 z-10">
         {Array(Math.min(6, target)).fill(0).map((_, i) => (
           <div 
             key={i} 
