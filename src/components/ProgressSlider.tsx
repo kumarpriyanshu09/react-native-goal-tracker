@@ -24,12 +24,13 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
   
-  // Track gesture direction
-  const gestureRef = useRef({
+  // Track touch/mouse positions
+  const touchRef = useRef({
     startX: 0,
     startY: 0,
-    isDirectionLocked: false,
-    isHorizontalDrag: false
+    lastX: 0,
+    moveDetected: false,
+    activeTracking: false
   });
 
   // Sync with external 'current' prop if not dragging
@@ -64,109 +65,115 @@ export const ProgressSlider: React.FC<ProgressSliderProps> = ({
     return `${valToFormat}/${target} ${unit || ''}`.trim();
   }, [progress, target, unit]);
 
-  // Handle drag movement with direction detection
-  const handleDrag = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!sliderRef.current || !isDragging) return;
+  // Function to update progress based on pointer position
+  const updateProgressFromPosition = useCallback((clientX: number) => {
+    if (!sliderRef.current) return;
     
-    // Get current coordinates
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
+    const rect = sliderRef.current.getBoundingClientRect();
+    const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const newProgress = Math.round(position * target);
     
-    // If we haven't locked direction yet, determine if this is horizontal or vertical
-    if (!gestureRef.current.isDirectionLocked) {
-      const deltaX = Math.abs(clientX - gestureRef.current.startX);
-      const deltaY = Math.abs(clientY - gestureRef.current.startY);
+    setProgress(prevProgress => {
+      if (newProgress !== prevProgress) {
+        if (onProgressChange) onProgressChange(newProgress);
+        return newProgress;
+      }
+      return prevProgress;
+    });
+  }, [target, onProgressChange]);
+
+  // Simpler touch and mouse handlers that only care about horizontal movement
+  const handlePointerMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging || !touchRef.current.activeTracking) return;
+    
+    e.preventDefault(); // Prevent scrolling and other touch actions
+    
+    // Extract client coordinates
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    // If this is the first significant move, determine if it's horizontal enough
+    if (!touchRef.current.moveDetected) {
+      const deltaX = Math.abs(clientX - touchRef.current.startX);
+      const deltaY = Math.abs(clientY - touchRef.current.startY);
       
-      // Lock direction once we have a clear gesture (with a small threshold)
+      // If we detect significant movement
       if (deltaX > 5 || deltaY > 5) {
-        gestureRef.current.isDirectionLocked = true;
-        gestureRef.current.isHorizontalDrag = deltaX > deltaY;
+        touchRef.current.moveDetected = true;
         
-        // If vertical movement dominant, cancel drag operation
-        if (!gestureRef.current.isHorizontalDrag) {
-          handleDragEnd();
+        // If movement is more vertical than horizontal, cancel the drag
+        if (deltaY > deltaX * 1.5) {
+          handlePointerEnd();
           return;
         }
       }
     }
     
-    // Only process horizontal drags
-    if (gestureRef.current.isDirectionLocked && gestureRef.current.isHorizontalDrag) {
-      e.preventDefault(); // Prevent scrolling only when we confirm horizontal drag
-      
-      const rect = sliderRef.current.getBoundingClientRect();
-      const position = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const newProgress = Math.round(position * target);
-      
-      setProgress(prevProgress => {
-        if (newProgress !== prevProgress) {
-          if (onProgressChange) onProgressChange(newProgress);
-          return newProgress;
-        }
-        return prevProgress;
-      });
-    }
-  }, [isDragging, target, onProgressChange]);
+    // Update the progress based on the X position
+    updateProgressFromPosition(clientX);
+    touchRef.current.lastX = clientX;
+  }, [isDragging, updateProgressFromPosition]);
 
-  // Handle drag end
-  const handleDragEnd = useCallback(() => {
+  // Clean up event handlers when pointer is released
+  const handlePointerEnd = useCallback(() => {
+    if (!isDragging) return;
+    
     setIsDragging(false);
-    gestureRef.current.isDirectionLocked = false;
-    gestureRef.current.isHorizontalDrag = false;
+    touchRef.current.activeTracking = false;
+    touchRef.current.moveDetected = false;
     
-    document.removeEventListener('mousemove', handleDrag);
-    document.removeEventListener('mouseup', handleDragEnd);
-    document.removeEventListener('touchmove', handleDrag);
-    document.removeEventListener('touchend', handleDragEnd);
-  }, [handleDrag]);
+    document.removeEventListener('mousemove', handlePointerMove);
+    document.removeEventListener('mouseup', handlePointerEnd);
+    document.removeEventListener('touchmove', handlePointerMove);
+    document.removeEventListener('touchend', handlePointerEnd);
+    document.removeEventListener('touchcancel', handlePointerEnd);
+  }, [isDragging, handlePointerMove]);
 
-  // Handle drag start - Store initial position and set up listeners
-  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Get starting coordinates
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
+  // Initialize drag on pointer down
+  const handlePointerStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default browser handling
+    e.preventDefault();
     
-    // Store starting position for direction detection
-    gestureRef.current.startX = clientX;
-    gestureRef.current.startY = clientY;
-    gestureRef.current.isDirectionLocked = false;
+    // Get coordinates
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
+    // Store starting coordinates
+    touchRef.current = {
+      startX: clientX,
+      startY: clientY,
+      lastX: clientX,
+      moveDetected: false,
+      activeTracking: true
+    };
+    
+    // Update progress immediately to respond to taps/clicks
+    updateProgressFromPosition(clientX);
+    
+    // Set dragging state
     setIsDragging(true);
     
-    // Add event listeners for continued dragging
-    document.addEventListener('mousemove', handleDrag);
-    document.addEventListener('mouseup', handleDragEnd);
-    document.addEventListener('touchmove', handleDrag, { passive: false });
-    document.addEventListener('touchend', handleDragEnd);
-  }, [handleDrag, handleDragEnd]);
+    // Add event listeners for movement and release
+    document.addEventListener('mousemove', handlePointerMove, { passive: false });
+    document.addEventListener('mouseup', handlePointerEnd);
+    document.addEventListener('touchmove', handlePointerMove, { passive: false });
+    document.addEventListener('touchend', handlePointerEnd);
+    document.addEventListener('touchcancel', handlePointerEnd);
+  }, [handlePointerMove, handlePointerEnd, updateProgressFromPosition]);
 
   // Component Rendering with improved design
   return (
     <div
-      className="relative h-14 w-full rounded-xl overflow-hidden shadow-sm select-none cursor-grab active:cursor-grabbing mx-1 flex"
+      className="relative h-14 w-full rounded-xl overflow-hidden shadow-sm select-none mx-1 flex"
       ref={sliderRef}
       role="slider"
       aria-valuemin={0}
       aria-valuemax={target}
       aria-valuenow={progress}
       aria-label={`Progress slider for ${text || 'goal'}`}
-      style={{
-        touchAction: 'pan-y',
-      }}
-      onMouseDown={handleDragStart}
-      onTouchStart={handleDragStart}
+      style={{ touchAction: 'none' }} // Disable browser touch actions completely
+      onMouseDown={handlePointerStart}
+      onTouchStart={handlePointerStart}
     >
       {/* Colored Progress Section - Full width background with colored progress */}
       <div 
